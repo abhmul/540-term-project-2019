@@ -205,9 +205,10 @@ if __name__ == '__main__':
     road = RoadData()
 
     # Train data tests
+    logging.info("Testing the train data")
     train = road.load_train()
-    print(f'X: {train.x}')
-    print(f'Y: {train.y}')
+    # print(f'X: {train.x}')
+    # print(f'Y: {train.y}')
     # Try plotting some training images
     traingen = train.flow(batch_size=4, shuffle=True)
     images, masks = next(traingen)
@@ -215,16 +216,27 @@ if __name__ == '__main__':
     print(f'Mask pixel range: ({np.min(masks)}, {np.max(masks)})')
     plot.plot_img_masks(images, masks)
     # Test rle decoding
+    logging.info("Test the rle decoding")
     dec_masks = np.array([rle_decoding(rle_encoding(mask)) for mask in masks])
     plot.plot_img_masks(masks, dec_masks)
 
     # Stratification tests
+    logging.info("Test the stratification")
     categories = road.get_stratification_categories(train)
     print(f'Category Counts: {np.bincount(categories)}')
 
     # Test data tests
+    logging.info("Test the test data")
     test = road.load_test()
-    print(f'X: {test.x}')
+    # print(f'X: {test.x}')
     # Try plotting some test images
     testgen = test.flow(batch_size=9, shuffle=True)
     plot.plot_img_grid(next(testgen))
+
+    # Test the cropper
+    logging.info("Test the cropper")
+    from augmenters import Cropper
+    traingen = train.flow(batch_size=16, shuffle=True)
+    traingen = Cropper(crop_size=(128, 128), augment_labels=True)(traingen)
+    images, masks = next(traingen)
+    plot.plot_img_masks(images, masks)
