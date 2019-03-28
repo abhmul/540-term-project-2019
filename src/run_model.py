@@ -34,6 +34,8 @@ parser.add_argument('--epochs', type=int, default=100,
                     help='Number of epochs to train for')
 parser.add_argument('--seed', type=int, default=42,
                     help='Random seed to use')
+parser.add_argument('-ta', '--test_augment', type=int, default=1,
+                    help='Number of test augmentations to use')
 
 
 # parser.add_argument('--num_completed', type=int, default=0, help='How many completed folds')
@@ -58,6 +60,7 @@ def train_model(model,
                 val_batch_size=32,
                 plot=True,
                 run_id='default_model_name',
+                augmenter=None,
                 debug=False):
 
     # Create the generators
@@ -66,8 +69,12 @@ def train_model(model,
     logging.info('Flowing the train and validation sets')
     traingen = trainset.flow(
         batch_size=batch_size, shuffle=True, seed=utils.get_random_seed())
-    # traingen = Cropper(crop_size=(128, 128), augment_labels=True)(traingen)
     valgen = valset.flow(batch_size=val_batch_size, shuffle=False)
+
+    if augmenter is not None:
+        logging.info(f'Training with augmenter {augmenter.image_augmenter}')
+        augmenter.labels = True
+        traingen = augmenter(traingen)
 
     # Create the callbacks
     logging.info('Creating the callbacks')
@@ -96,11 +103,6 @@ def train_model(model,
             plot_during_train=plot,
             save_to_file=utils.get_plot_path(run_id + '_dice_coef'),
             block_on_end=False),
-        # Plotter(
-        #     'mean_iou_t',
-        #     plot_during_train=plot,
-        #     save_to_file=utils.get_plot_path(RUN_ID+'_mean_iou'),
-        #     block_on_end=False),
     ]
 
     train_steps = 3 if debug else traingen.steps_per_epoch
@@ -116,23 +118,35 @@ def train_model(model,
         validation_steps=val_steps,
         callbacks=callbacks,
         verbose=1,
-        max_queue_size=6)
+        max_queue_size=3)
 
     return logs
 
 
-def test_model(model, test_data: NpDataset, batch_size=32, debug=False):
+def test_model(model, test_data: NpDataset, batch_size=32, augmenter=None, num_augmentations=1, debug=False):
     logging.info(f'Testing model with batch size of {batch_size}')
     logging.info('Flowing the test set')
     test_data.output_labels = False
     testgen = test_data.flow(batch_size=batch_size, shuffle=False)
+    if augmenter is not None:
+        logging.info(f'Testing with augmenter {augmenter.image_augmenter}')
+        augmenter.labels = False
+        testgen = augmenter(testgen)
+    else:
+        num_augmentations = 1
 
     test_steps = 3 if debug else testgen.steps_per_epoch
 
-    test_preds = model.predict_generator(
-        testgen,
-        test_steps,
-        verbose=1)
+    test_preds = 0.
+    for i in range(num_augmentations):
+        logging.info(f'Testing for augmentation {i+1}/{num_augmentations}')
+        aug_test_preds = model.predict_generator(
+            testgen,
+            test_steps,
+            verbose=1,
+            max_queue_size=3)
+        test_preds = test_preds + aug_test_preds
+    test_preds /= num_augmentations
 
     if debug:
         filler = np.zeros(
@@ -142,8 +156,10 @@ def test_model(model, test_data: NpDataset, batch_size=32, debug=False):
     return test_preds.squeeze(-1)
 
 
-def train(data: RoadData, model_loader, model_params, cmdargs):
+def train(data: RoadData, model_dict, cmdargs):
     train_data = data.load_train()
+    model_loader, model_params = model_dict['loader'], model_dict['params']
+
     model = model_loader(**model_params)
     train_data, val_data = train_data.validation_split(
         split=0.1, shuffle=True, seed=utils.get_random_seed(), stratified=True,
@@ -154,14 +170,17 @@ def train(data: RoadData, model_loader, model_params, cmdargs):
                 val_batch_size=cmdargs.test_batch_size,
                 plot=cmdargs.plot,
                 run_id=cmdargs.run_id,
+                augmenter=model_dict['augmenter'],
                 debug=cmdargs.debug)
     # Load the model and score it
     model.load_weights(utils.get_model_path(cmdargs.run_id))
     return model
 
 
-def train_kfold(data: RoadData, model_loader, model_params, cmdargs):
+def train_kfold(data: RoadData, model_dict, cmdargs):
     full_data = data.load_train()
+    model_loader, model_params = model_dict['loader'], model_dict['params']
+
     model = None
     for i, (train_data, val_data) in enumerate(full_data.kfold(cmdargs.kfold)):
         logging.info(f'Training fold {i+1}/{cmdargs.kfold}')
@@ -177,12 +196,18 @@ def train_kfold(data: RoadData, model_loader, model_params, cmdargs):
                     val_batch_size=cmdargs.test_batch_size,
                     plot=cmdargs.plot,
                     run_id=run_id,
+                    augmenter=model_dict['augmenter'],
                     debug=cmdargs.debug)
     return model
 
 
-def test(data: RoadData, model_loader, model_params, cmdargs, model=None):
+def test(data: RoadData, model_dict, cmdargs, model=None):
     test_data = data.load_test()
+    model_loader, model_params = model_dict['loader'], model_dict['params']
+    augmenter = None
+    if cmdargs.test_augment:
+        num_augmentations = cmdargs.test_augment
+        augmenter = model_dict['augmenter']
     if model is None:
         logging.info('No model provided, constructing one.')
         model = model_loader(**model_params)
@@ -192,6 +217,8 @@ def test(data: RoadData, model_loader, model_params, cmdargs, model=None):
         model,
         test_data,
         batch_size=cmdargs.test_batch_size,
+        augmenter=augmenter,
+        num_augmentations=num_augmentations,
         debug=cmdargs.debug
     )
     # Save the submission
@@ -201,8 +228,13 @@ def test(data: RoadData, model_loader, model_params, cmdargs, model=None):
         test_data.ids)
 
 
-def test_kfold(data: RoadData, model_loader, model_params, cmdargs, model=None):
+def test_kfold(data: RoadData, model_dict, cmdargs, model=None):
     test_data = data.load_test()
+    model_loader, model_params = model_dict['loader'], model_dict['params']
+    augmenter = None
+    if cmdargs.test_augment:
+        num_augmentations = cmdargs.test_augment
+        augmenter = model_dict['augmenter']
     if model is None:
         logging.info('No model provided, constructing one.')
         model = model_loader(**model_params)
@@ -217,6 +249,8 @@ def test_kfold(data: RoadData, model_loader, model_params, cmdargs, model=None):
                 model,
                 test_data,
                 batch_size=cmdargs.test_batch_size,
+                augmenter=augmenter,
+                num_augmentations=num_augmentations,
                 debug=cmdargs.debug
             )
     # Average the predictions
@@ -235,7 +269,7 @@ if __name__ == '__main__':
     utils.set_random_seed(args.seed)
 
     # Get the model loader and params
-    loader, params = load_model(args.run_id)
+    model_dict = load_model(args.run_id)
 
     data = RoadData()
     model = None
@@ -243,11 +277,11 @@ if __name__ == '__main__':
     # check for kfold
     if args.kfold:
         if args.train:
-            model = train_kfold(data, loader, params, args)
+            model = train_kfold(data, model_dict, args)
         if args.test:
-            test_kfold(data, loader, params, args, model=model)
+            test_kfold(data, model_dict, args, model=model)
 
     if args.train:
-        model = train(data, loader, params, args)
+        model = train(data, model_dict, args)
     if args.test:
-        test(data, loader, params, args, model=model)
+        test(data, model_dict, args, model=model)

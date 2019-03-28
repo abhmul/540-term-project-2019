@@ -7,6 +7,24 @@
     },
     "filters": 2
   },
+  "unet-test-2": {
+    "loader": "get_dilated_unet",
+    "optimizer": {
+      "name": "adam",
+      "lr": 0.01
+    },
+    "filters": 2,
+    "augmenter": [
+      {
+        "name": "Flipud",
+        "p": 0.5
+      },
+      {
+        "name": "Fliplr",
+        "p": 0.5
+      }
+    ]
+  },
   "unet-dilated-2": {
     "loader": "get_dilated_unet",
     "optimizer": {
@@ -21,6 +39,16 @@
       "name": "adam",
       "lr": 0.01
     },
-    "filters": 32
+    "filters": 32,
+    "augmenter": [
+      {
+        "name": "Flipud",
+        "p": 0.5
+      },
+      {
+        "name": "Fliplr",
+        "p": 0.5
+      }
+    ]
   }
 }
