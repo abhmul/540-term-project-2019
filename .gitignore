@@ -104,6 +104,7 @@ venv.bak/
 .mypy_cache/
 
 # Data stuff
-input/
-models/
-submissions/
+/input/
+/models/
+/submissions/
+/input.tar.gz
