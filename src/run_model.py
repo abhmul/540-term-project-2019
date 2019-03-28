@@ -280,8 +280,8 @@ if __name__ == '__main__':
             model = train_kfold(data, model_dict, args)
         if args.test:
             test_kfold(data, model_dict, args, model=model)
-
-    if args.train:
-        model = train(data, model_dict, args)
-    if args.test:
-        test(data, model_dict, args, model=model)
+    else:
+        if args.train:
+            model = train(data, model_dict, args)
+        if args.test:
+            test(data, model_dict, args, model=model)
