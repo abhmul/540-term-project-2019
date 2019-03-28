@@ -1,0 +1,26 @@
+{
+  "unet-test-1": {
+    "loader": "get_simple_unet",
+    "optimizer": {
+      "name": "adam",
+      "lr": 0.01
+    },
+    "filters": 2
+  },
+  "unet-dilated-2": {
+    "loader": "get_dilated_unet",
+    "optimizer": {
+      "name": "adam",
+      "lr": 0.01
+    },
+    "filters": 16
+  },
+  "unet-dilated-3": {
+    "loader": "get_dilated_unet",
+    "optimizer": {
+      "name": "adam",
+      "lr": 0.01
+    },
+    "filters": 32
+  }
+}
