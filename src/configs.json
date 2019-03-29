@@ -39,7 +39,7 @@
       "name": "adam",
       "lr": 0.01
     },
-    "filters": 32,
+    "filters": 16,
     "augmenter": [
       {
         "name": "Flipud",

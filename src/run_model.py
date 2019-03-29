@@ -55,7 +55,7 @@ logging.basicConfig(
 def train_model(model,
                 trainset: NpDataset,
                 valset: NpDataset,
-                epochs=100,
+                epochs=50,
                 batch_size=32,
                 val_batch_size=32,
                 plot=True,
