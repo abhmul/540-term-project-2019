@@ -5,5 +5,24 @@
     "batch_size": 4,
     "test_batch_size": 32,
     "test_augment": 4
+  },
+
+  "test-2": {
+    "run_id": "unet-test-2",
+    "epochs": 2,
+    "batch_size": 4,
+    "test_batch_size": 32,
+    "test_augment": 4,
+    "hello": "hello"
+  },
+
+  "p2xlarge-1": {
+    "run_id": "unet-dilated-4",
+    "epochs": 75,
+    "batch_size": 16,
+    "test_batch_size": 64,
+    "test_augment": 4,
+    "seed": 42,
+    "use_np": true
   }
 }

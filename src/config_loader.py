@@ -43,5 +43,6 @@ def load_model(name):
 def load_train(name, cmdargs):
     params = TRAIN_CONFIG[name]
     for k, v in params.items():
+        assert hasattr(cmdargs, k), f'Found invalid cmdline argument "{k}"'
         setattr(cmdargs, k, v)
     return cmdargs

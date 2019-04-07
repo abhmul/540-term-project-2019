@@ -402,6 +402,8 @@ if __name__ == '__main__':
     if args.train_id:
         args = load_train(args.train_id, args)
 
+    print(f'Running model with cmdargs: {args}')
+
     # Set the random seed
     utils.set_random_seed(args.seed)
 
