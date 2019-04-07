@@ -26,6 +26,7 @@ def plot_img_grid(images):
             images[i] = images[i].squeeze(axis=-1)
 
         cmap = 'gray' if images[i].ndim == 2 else None
+        # print(f'Shape -- {images[i].shape}  Cmap -- {cmap}')
         plt.imshow(images[i].astype(float), cmap=cmap)
 
     plt.subplots_adjust(wspace=0.01, hspace=0)

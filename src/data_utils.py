@@ -11,6 +11,7 @@ from skimage.transform import resize
 from pyjet.data import ImageMaskDataset, ImageDataset
 
 from kaggleutils import dump_args
+from plot_utils import plot_img_grid
 
 # All images should be 512 x 512
 ORIG_IMG_SIZE = (512, 512)
@@ -18,6 +19,32 @@ IMG_SIZE = (128, 128)
 EMPTY_THRESHOLD = 5
 MASK_SUFFIX = '_msk'
 IMG_SUFFIX = '_sat'
+
+
+class ImageNPDataset(ImageDataset):
+
+    def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
+        super(ImageNPDataset, self).__init__(x, y=y, ids=ids)
+        self.img_size = img_size
+        assert mode in ImageDataset.MODE2FUNC, "Invalid mode %s" % mode
+        self.mode = mode
+        logging.info(
+            "Creating ImageDataset(img_size={img_size}, mode={mode}".format(
+                img_size=self.img_size, mode=self.mode))
+        logging.info('Loading the images to uint8')
+        self.x = self.load_all_imgs()
+        print(self.x.shape)
+
+    def load_all_imgs(self):
+        x = self.load_img_batch(
+            self.x, img_size=self.img_size, mode=self.mode, to_float=False)[0]
+        return x
+
+    def create_batch(self, batch_indicies):
+        batch_x = self.x[batch_indicies].astype(np.float32)
+        if self.output_labels:
+            return batch_x, self.y[batch_indicies]
+        return batch_x
 
 
 class ImageRLEDataset(ImageDataset):
@@ -30,7 +57,7 @@ class ImageRLEDataset(ImageDataset):
             if img_size is not None and img_size != ORIG_IMG_SIZE:
                 mask = resize(
                     mask, img_size, mode='constant',
-                    preserve_range=True).astype(float)
+                    preserve_range=True).astype(np.float32)
             masks.append(mask)
 
         # If variable image size, stack the images as numpy arrays otherwise
@@ -52,13 +79,24 @@ class ImageRLEDataset(ImageDataset):
         return x
 
 
+class ImageNPRLEDataset(ImageNPDataset, ImageRLEDataset):
+
+    def create_batch(self, batch_indicies):
+        batch_x = self.x[batch_indicies].astype(np.float32)
+        if self.output_labels:
+            return batch_x, self.load_rle_batch(self.y[batch_indicies], img_size=self.img_size)
+        return batch_x
+
+
 class RoadData(object):
     @dump_args
     def __init__(self, path_to_data='../input', mode='rgb',
-                 img_size=ORIG_IMG_SIZE):
+                 img_size=ORIG_IMG_SIZE, train_np=False, test_np=False):
         self.path_to_data = path_to_data
         self.mode = mode
         self.img_size = img_size
+        self.train_np = train_np
+        self.test_np = test_np
 
         self.path_to_train_images = os.path.join(path_to_data, 'train')
         self.path_to_test_images = os.path.join(path_to_data, 'val')
@@ -104,6 +142,9 @@ class RoadData(object):
         y = np.array(y)
         print('X shape:', x.shape)
         print('Y Shape:', y.shape)
+        if self.train_np:
+            print('Using in memory image training dataset')
+            return ImageNPRLEDataset(x, y=y, ids=np.array(ids))
         return ImageRLEDataset(x, y=y, ids=np.array(ids))
 
     def load_test(self):
@@ -123,7 +164,10 @@ class RoadData(object):
         # Turn into numpy arrays
         x = np.array(x)
         print('X shape:', x.shape)
-        return ImageDataset(x, y=None, ids=np.array(ids))
+        if self.test_np:
+            print('Using in memory image test dataset')
+            return ImageNPRLEDataset(x, y=None, ids=np.array(ids))
+        return ImageRLEDataset(x, y=None, ids=np.array(ids))
 
     @staticmethod
     def get_stratification_categories(train_dataset, num_categories=5):

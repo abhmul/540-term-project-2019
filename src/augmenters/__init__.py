@@ -1,2 +1,2 @@
 from .cropper import Cropper
-from .image import ImageAugmenter
+from .image import ImageAugmenter, FlipAugmenter

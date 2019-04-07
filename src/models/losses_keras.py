@@ -10,7 +10,7 @@ def dice_coef(y_true, y_pred):
     intersection = y_true_f * y_pred_f
     score = (2. * K.sum(intersection) + K.epsilon()) / \
         (K.sum(y_true_f) + K.sum(y_pred_f) + K.epsilon())
-    return score
+    return K.clip(score, 0.0, 1.0)
 
 
 def dice_loss(y_true, y_pred):

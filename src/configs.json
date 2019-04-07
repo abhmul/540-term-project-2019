@@ -25,6 +25,25 @@
       }
     ]
   },
+  "unet-test-3": {
+    "loader": "get_dilated_unet",
+    "optimizer": {
+      "name": "sgd",
+      "lr": 0.01,
+      "momentum": 0.9
+    },
+    "filters": 2,
+    "augmenter": [
+      {
+        "name": "Flipud",
+        "p": 0.5
+      },
+      {
+        "name": "Fliplr",
+        "p": 0.5
+      }
+    ]
+  },
   "unet-dilated-2": {
     "loader": "get_dilated_unet",
     "optimizer": {
@@ -40,6 +59,27 @@
       "lr": 0.01
     },
     "filters": 16,
+    "augmenter": [
+      {
+        "name": "Flipud",
+        "p": 0.5
+      },
+      {
+        "name": "Fliplr",
+        "p": 0.5
+      }
+    ]
+  },
+  "unet-dilated-4": {
+    "loader": "get_dilated_unet",
+    "optimizer": {
+      "name": "rmsprop",
+      "lr": 0.0001
+    },
+    "filters": 32,
+    "use_deconv": true,
+    "no_pool": true,
+    "dropout": 0.1,
     "augmenter": [
       {
         "name": "Flipud",

@@ -10,10 +10,6 @@ with open(CONFIG_PATH, 'r') as config_file:
     CONFIG = json.load(config_file)
 
 
-def build_optimizer(params):
-    return getattr(keras_optimizers, params.pop('name'))(**params)
-
-
 def build_augmenter(params):
     augmenters = []
     for p in params:
@@ -29,7 +25,7 @@ def load_model(name):
 
     # Build the optimizer
     optim_params = params['optimizer']
-    params['optimizer'] = build_optimizer(optim_params)
+    params['optimizer'] = optim_params
 
     # Build the augmenter if there is one
     if 'augmenter' in params:

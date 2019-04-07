@@ -1,6 +1,7 @@
-from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Activation, SpatialDropout2D
+from keras.layers import Conv2D, MaxPooling2D, UpSampling2D, BatchNormalization, Activation, SpatialDropout2D, Conv2DTranspose
 from keras.layers import Input, add, concatenate
 from keras.models import Model
+from keras import optimizers as keras_optimizers
 from keras.optimizers import RMSprop
 from kaggleutils import dump_args
 
@@ -19,11 +20,18 @@ from .metrics_keras import (
 )
 
 
+def build_optimizer(params):
+    optim_name = params.pop('name')
+    optimizer = getattr(keras_optimizers, optim_name)(**params)
+    params['name'] = optim_name
+    return optimizer
+
+
 def batchnorm_if_true(batchnorm):
     return BatchNormalization() if batchnorm else lambda x: x
 
 
-def encoder(x, filters=44, n_block=3, kernel_size=(3, 3), activation='relu', batchnorm=True, dropout=0.2):
+def encoder(x, filters=44, n_block=3, kernel_size=(3, 3), activation='relu', batchnorm=True, dropout=0.2, no_pool=False):
     skip = []
     activation_layer = Activation(activation)
     for i in range(n_block):
@@ -40,7 +48,12 @@ def encoder(x, filters=44, n_block=3, kernel_size=(3, 3), activation='relu', bat
         x = activation_layer(x)
 
         skip.append(x)
-        x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
+        if no_pool:
+            x = Conv2D(filters * 2**i, kernel_size=(2, 2), stride=(2, 2))(x)
+            x = batchnorm_if_true(batchnorm)(x)
+            x = activation_layer(x)
+        else:
+            x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(x)
     return x, skip
 
 
@@ -91,10 +104,16 @@ def bottleneck(x, filters_bottleneck, depth=3,
     return x
 
 
-def decoder(x, skip, filters, n_block=3, kernel_size=(3, 3), activation='relu', batchnorm=True, dropout=0.2):
+def decoder(x, skip, filters, n_block=3, kernel_size=(3, 3), activation='relu', batchnorm=True, dropout=0.2, use_deconv=False):
     activation_layer = Activation(activation)
     for i in reversed(range(n_block)):
-        x = UpSampling2D(size=(2, 2))(x)
+        if use_deconv:
+            x = Conv2DTranspose(
+                filters * 2 ** i, kernel_size=(2, 2), strides=(2, 2))(x)
+            x = batchnorm_if_true(batchnorm)(x)
+            x = activation_layer(x)
+        else:
+            x = UpSampling2D(size=(2, 2))(x)
         x = Conv2D(filters * 2**i, kernel_size, padding='same')(x)
         x = batchnorm_if_true(batchnorm)(x)
         x = activation_layer(x)
@@ -123,17 +142,21 @@ def get_simple_unet(
     optimizer=None,
     loss=bce_dice_loss,
     n_class=1,
+    use_deconv=False,
+    no_pool=False
 ):
     # Default to an Adam optimizer
     if optimizer is None:
         optimizer = 'adam'
+    if isinstance(optimizer, dict):
+        optimizer = build_optimizer(optimizer)
 
     inputs = Input(input_shape)
 
-    enc, skip = encoder(inputs, filters, n_block)
+    enc, skip = encoder(inputs, filters, n_block, no_pool=no_pool)
     bottle = bottleneck(enc, filters_bottleneck=filters *
                         2**n_block, depth=bottleneck_depth)
-    dec = decoder(bottle, skip, filters, n_block)
+    dec = decoder(bottle, skip, filters, n_block, use_deconv=use_deconv)
     classify = Conv2D(n_class, (1, 1), activation='sigmoid')(dec)
 
     model = Model(inputs=inputs, outputs=classify)
@@ -151,18 +174,22 @@ def get_dilated_unet(
         optimizer=None,
         loss=bce_dice_loss,
         n_class=1,
+        use_deconv=False,
+        no_pool=False
 ):
 
     # Default to an RMSProp optimizer with lr=0.0001
     if optimizer is None:
         optimizer = RMSprop(0.0001)
+    if isinstance(optimizer, dict):
+        optimizer = build_optimizer(optimizer)
 
     inputs = Input(input_shape)
 
-    enc, skip = encoder(inputs, filters, n_block)
+    enc, skip = encoder(inputs, filters, n_block, no_pool=no_pool)
     bottle = dilated_bottleneck(enc, filters_bottleneck=filters *
                                 2**n_block, mode=mode)
-    dec = decoder(bottle, skip, filters, n_block)
+    dec = decoder(bottle, skip, filters, n_block, use_deconv=use_deconv)
     classify = Conv2D(n_class, (1, 1), activation='sigmoid')(dec)
 
     model = Model(inputs=inputs, outputs=classify)
