@@ -8,6 +8,9 @@ from augmenters import ImageAugmenter
 CONFIG_PATH = './configs.json'
 with open(CONFIG_PATH, 'r') as config_file:
     CONFIG = json.load(config_file)
+TRAIN_CONFIG_PATH = './train_configs.json'
+with open(TRAIN_CONFIG_PATH, 'r') as config_file:
+    TRAIN_CONFIG = json.load(config_file)
 
 
 def build_augmenter(params):
@@ -35,3 +38,10 @@ def load_model(name):
     return_dict['params'] = params
 
     return return_dict
+
+
+def load_train(name, cmdargs):
+    params = TRAIN_CONFIG[name]
+    for k, v in params.items():
+        setattr(cmdargs, k, v)
+    return cmdargs

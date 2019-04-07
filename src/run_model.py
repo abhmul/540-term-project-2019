@@ -21,10 +21,13 @@ import kaggleutils as utils
 from data_utils import RoadData
 from plot_utils import plot_img_grid
 from augmenters import Cropper, FlipAugmenter
-from config_loader import load_model
+from config_loader import load_model, load_train
 
 parser = argparse.ArgumentParser(description='Run the models.')
-parser.add_argument('run_id', help='ID of the model configuration')
+parser.add_argument(
+    '--run_id', help='ID of the model configuration', default='')
+parser.add_argument(
+    '--train_id', help='ID of the train configuration', default='')
 parser.add_argument('-k', '--kfold', type=int, default=0,
                     help='Run this script to train a model with kfold validation')
 parser.add_argument('--train', action='store_true',
@@ -71,7 +74,7 @@ logger = logging.getLogger()
 def train_model(model,
                 trainset: NpDataset,
                 valset: NpDataset,
-                epochs=50,
+                epochs=70,
                 batch_size=32,
                 val_batch_size=32,
                 plot=True,
@@ -395,6 +398,9 @@ def test_kfold(data: RoadData, model_dict, cmdargs, model=None):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
+    if args.train_id:
+        args = load_train(args.train_id, args)
 
     # Set the random seed
     utils.set_random_seed(args.seed)

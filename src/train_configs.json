@@ -1,0 +1,9 @@
+{
+  "test-1": {
+    "run_id": "unet-test-2",
+    "epochs": 2,
+    "batch_size": 4,
+    "test_batch_size": 32,
+    "test_augment": 4
+  }
+}
