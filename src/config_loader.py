@@ -31,9 +31,8 @@ def load_model(name):
     params['optimizer'] = optim_params
 
     # Build the augmenter if there is one
-    if 'augmenter' in params:
-        augmenter = build_augmenter(params.pop('augmenter'))
-        return_dict['augmenter'] = augmenter
+    return_dict['augmenter'] = build_augmenter(
+        params.pop('augmenter')) if 'augmenter' in params else None
 
     return_dict['params'] = params
 

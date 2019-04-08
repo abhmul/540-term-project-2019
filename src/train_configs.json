@@ -1,10 +1,19 @@
 {
+  "test-0": {
+    "run_id": "unet-test-1",
+    "epochs": 2,
+    "batch_size": 4,
+    "test_batch_size": 32,
+    "debug": true
+  },
+
   "test-1": {
     "run_id": "unet-test-2",
     "epochs": 2,
     "batch_size": 4,
     "test_batch_size": 32,
-    "test_augment": 4
+    "test_augment": 4,
+    "debug": true
   },
 
   "test-2": {
@@ -14,6 +23,15 @@
     "test_batch_size": 32,
     "test_augment": 4,
     "hello": "hello"
+  },
+
+  "test-3": {
+    "run_id": "unet-test-3",
+    "epochs": 2,
+    "batch_size": 1,
+    "test_batch_size": 32,
+    "test_augment": 4,
+    "debug": true
   },
 
   "p2xlarge-1": {

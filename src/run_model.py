@@ -216,6 +216,9 @@ def train(data: RoadData, model_dict, cmdargs):
     model_loader, model_params = model_dict['loader'], model_dict['params']
 
     model = model_loader(**model_params)
+    if cmdargs.debug:
+        model.summary()
+
     train_data, val_data = train_data.validation_split(
         split=0.1, shuffle=True, seed=utils.get_random_seed(), stratified=True,
         stratify_by=data.get_stratification_categories(train_data))

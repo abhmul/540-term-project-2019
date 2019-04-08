@@ -26,13 +26,15 @@
     ]
   },
   "unet-test-3": {
-    "loader": "get_dilated_unet",
+    "loader": "get_simple_unet",
     "optimizer": {
-      "name": "sgd",
-      "lr": 0.01,
-      "momentum": 0.9
+      "name": "rmsprop",
+      "lr": 0.0001
     },
-    "filters": 2,
+    "filters": 32,
+    "use_deconv": true,
+    "no_pool": true,
+    "dropout": 0.1,
     "augmenter": [
       {
         "name": "Flipud",
