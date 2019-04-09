@@ -26,14 +26,13 @@ class ImageNPDataset(ImageDataset):
     def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
         super(ImageNPDataset, self).__init__(
             x, y=y, ids=ids, img_size=img_size, mode=mode)
-        logging.info('Loading the images to uint8')
-        self.x = self.load_all_imgs()
-        print(f'X (in-mem): {self.x.shape}')
 
     def load_all_imgs(self):
-        x = self.load_img_batch(
+        logging.info('Loading the images to uint8')
+        self.x = self.load_img_batch(
             tqdm(self.x), img_size=self.img_size, mode=self.mode, to_float=False)[0]
-        return x
+        print(f'X (in-mem): {self.x.shape}')
+        return self
 
     def create_batch(self, batch_indicies):
         batch_x = self.x[batch_indicies].astype(np.float32)
@@ -77,14 +76,13 @@ class ImageNPMaskDataset(ImageNPDataset, ImageRLEDataset):
     def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
         super(ImageNPMaskDataset, self).__init__(
             x, y=y, ids=ids, img_size=img_size, mode=mode)
-        logging.info('Loading the masks to uint8')
-        self.y = self.load_all_masks()
-        print(f'Y (in-mem): {self.y.shape}')
 
     def load_all_masks(self):
-        y = self.load_rle_batch(
+        logging.info('Loading the masks to uint8')
+        self.y = self.load_rle_batch(
             tqdm(self.y), img_size=self.img_size, to_float=False)
-        return y
+        print(f'Y (in-mem): {self.y.shape}')
+        return self
 
     def create_batch(self, batch_indicies):
         batch_x = self.x[batch_indicies].astype(np.float32)
@@ -158,7 +156,7 @@ class RoadData(object):
         print('Y Shape:', y.shape)
         if self.train_np:
             print('Using in memory image training dataset')
-            return ImageNPMaskDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
+            return ImageNPMaskDataset(x, y=y, ids=np.array(ids), img_size=self.img_size).load_all_imgs().load_all_masks()
         return ImageRLEDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
 
     def load_test(self):
@@ -180,7 +178,7 @@ class RoadData(object):
         print('X shape:', x.shape)
         if self.test_np:
             print('Using in memory image test dataset')
-            return ImageNPMaskDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
+            return ImageNPMaskDataset(x, y=None, ids=np.array(ids), img_size=self.img_size).load_all_imgs()
         return ImageRLEDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
 
     @staticmethod
