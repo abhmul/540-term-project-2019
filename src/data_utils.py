@@ -15,7 +15,7 @@ from plot_utils import plot_img_grid
 
 # All images should be 512 x 512
 ORIG_IMG_SIZE = (512, 512)
-IMG_SIZE = (128, 128)
+IMG_SIZE = (512, 512)
 EMPTY_THRESHOLD = 5
 MASK_SUFFIX = '_msk'
 IMG_SUFFIX = '_sat'
@@ -24,13 +24,8 @@ IMG_SUFFIX = '_sat'
 class ImageNPDataset(ImageDataset):
 
     def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
-        super(ImageNPDataset, self).__init__(x, y=y, ids=ids)
-        self.img_size = img_size
-        assert mode in ImageDataset.MODE2FUNC, "Invalid mode %s" % mode
-        self.mode = mode
-        logging.info(
-            "Creating ImageDataset(img_size={img_size}, mode={mode}".format(
-                img_size=self.img_size, mode=self.mode))
+        super(ImageNPDataset, self).__init__(
+            x, y=y, ids=ids, img_size=img_size, mode=mode)
         logging.info('Loading the images to uint8')
         self.x = self.load_all_imgs()
         print(self.x.shape)
@@ -144,8 +139,8 @@ class RoadData(object):
         print('Y Shape:', y.shape)
         if self.train_np:
             print('Using in memory image training dataset')
-            return ImageNPRLEDataset(x, y=y, ids=np.array(ids))
-        return ImageRLEDataset(x, y=y, ids=np.array(ids))
+            return ImageNPRLEDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
+        return ImageRLEDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
 
     def load_test(self):
         logging.info(f'Loading test images from {self.path_to_test_images}')
@@ -166,8 +161,8 @@ class RoadData(object):
         print('X shape:', x.shape)
         if self.test_np:
             print('Using in memory image test dataset')
-            return ImageNPRLEDataset(x, y=None, ids=np.array(ids))
-        return ImageRLEDataset(x, y=None, ids=np.array(ids))
+            return ImageNPRLEDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
+        return ImageRLEDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
 
     @staticmethod
     def get_stratification_categories(train_dataset, num_categories=5):
