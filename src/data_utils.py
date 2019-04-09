@@ -42,26 +42,6 @@ class ImageNPDataset(ImageDataset):
         return batch_x
 
 
-class ImageNPMaskDataset(ImageNPDataset):
-
-    def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
-        super(ImageNPMaskDataset, self).__init__(
-            x, y=y, ids=ids, img_size=img_size, mode=mode)
-        logging.info('Loading the masks to uint8')
-        self.y = self.load_all_masks()
-        print(f'Y (in-mem): {self.y.shape}')
-
-    def load_all_masks(self):
-        y = self.load_rle_batch(self.y, img_size=self.img_size, to_float=False)
-        return y
-
-    def create_batch(self, batch_indicies):
-        batch_x = self.x[batch_indicies].astype(np.float32)
-        if self.output_labels:
-            return batch_x, self.y[batch_indicies].astype(np.float32)
-        return batch_x
-
-
 class ImageRLEDataset(ImageDataset):
 
     @staticmethod
@@ -81,6 +61,26 @@ class ImageRLEDataset(ImageDataset):
             masks[i] = mask
 
         return masks
+
+
+class ImageNPMaskDataset(ImageNPDataset, ImageRLEDataset):
+
+    def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
+        super(ImageNPMaskDataset, self).__init__(
+            x, y=y, ids=ids, img_size=img_size, mode=mode)
+        logging.info('Loading the masks to uint8')
+        self.y = self.load_all_masks()
+        print(f'Y (in-mem): {self.y.shape}')
+
+    def load_all_masks(self):
+        y = self.load_rle_batch(self.y, img_size=self.img_size, to_float=False)
+        return y
+
+    def create_batch(self, batch_indicies):
+        batch_x = self.x[batch_indicies].astype(np.float32)
+        if self.output_labels:
+            return batch_x, self.y[batch_indicies].astype(np.float32)
+        return batch_x
 
     def create_batch(self, batch_indicies):
         filenames = self.x[batch_indicies]
