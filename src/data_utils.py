@@ -32,7 +32,7 @@ class ImageNPDataset(ImageDataset):
 
     def load_all_imgs(self):
         x = self.load_img_batch(
-            self.x, img_size=self.img_size, mode=self.mode, to_float=False)[0]
+            tqdm(self.x), img_size=self.img_size, mode=self.mode, to_float=False)[0]
         return x
 
     def create_batch(self, batch_indicies):
@@ -62,6 +62,15 @@ class ImageRLEDataset(ImageDataset):
 
         return masks
 
+    def create_batch(self, batch_indicies):
+        filenames = self.x[batch_indicies]
+        x = self.load_img_batch(
+            filenames, img_size=self.img_size, mode=self.mode)[0]
+
+        if self.output_labels:
+            return x, self.load_rle_batch(self.y[batch_indicies], img_size=self.img_size)
+        return x
+
 
 class ImageNPMaskDataset(ImageNPDataset, ImageRLEDataset):
 
@@ -73,7 +82,8 @@ class ImageNPMaskDataset(ImageNPDataset, ImageRLEDataset):
         print(f'Y (in-mem): {self.y.shape}')
 
     def load_all_masks(self):
-        y = self.load_rle_batch(self.y, img_size=self.img_size, to_float=False)
+        y = self.load_rle_batch(
+            tqdm(self.y), img_size=self.img_size, to_float=False)
         return y
 
     def create_batch(self, batch_indicies):
@@ -81,15 +91,6 @@ class ImageNPMaskDataset(ImageNPDataset, ImageRLEDataset):
         if self.output_labels:
             return batch_x, self.y[batch_indicies].astype(np.float32)
         return batch_x
-
-    def create_batch(self, batch_indicies):
-        filenames = self.x[batch_indicies]
-        x = self.load_img_batch(
-            filenames, img_size=self.img_size, mode=self.mode)[0]
-
-        if self.output_labels:
-            return x, self.load_rle_batch(self.y[batch_indicies], img_size=self.img_size)
-        return x
 
 
 class ImageNPRLEDataset(ImageNPDataset, ImageRLEDataset):
