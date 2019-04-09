@@ -193,7 +193,10 @@ class RoadData(object):
                 mask = rle_decoding(mask_rle, img_size=ORIG_IMG_SIZE)
                 yield mask
 
-        coverage = np.array([np.sum(y) for y in label_gen(train_dataset)])
+        if isinstance(train_dataset, ImageNPMaskDataset):
+            coverage = np.sum(dataset.y, axis=(1, 2, 3))
+        else:
+            coverage = np.array([np.sum(y) for y in label_gen(train_dataset)])
         bounds = np.linspace(0.0, coverage.max(), num=num_categories)
 
         categories = np.zeros(n, dtype='int64')
