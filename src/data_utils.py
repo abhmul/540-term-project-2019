@@ -30,7 +30,7 @@ class ImageNPDataset(ImageDataset):
     def load_all_imgs(self):
         logging.info('Loading the images to uint8')
         self.x = self.load_img_batch(
-            tqdm(self.x), img_size=self.img_size, mode=self.mode, to_float=False)[0]
+            self.x, img_size=self.img_size, mode=self.mode, to_float=False)[0]
         print(f'X (in-mem): {self.x.shape}')
         return self
 
@@ -80,7 +80,7 @@ class ImageNPMaskDataset(ImageNPDataset, ImageRLEDataset):
     def load_all_masks(self):
         logging.info('Loading the masks to uint8')
         self.y = self.load_rle_batch(
-            tqdm(self.y), img_size=self.img_size, to_float=False)
+            self.y, img_size=self.img_size, to_float=False)
         print(f'Y (in-mem): {self.y.shape}')
         return self
 
