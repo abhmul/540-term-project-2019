@@ -28,7 +28,7 @@ class ImageNPDataset(ImageDataset):
             x, y=y, ids=ids, img_size=img_size, mode=mode)
         logging.info('Loading the images to uint8')
         self.x = self.load_all_imgs()
-        print(self.x.shape)
+        print(f'X (in-mem): {self.x.shape}')
 
     def load_all_imgs(self):
         x = self.load_img_batch(
@@ -42,25 +42,43 @@ class ImageNPDataset(ImageDataset):
         return batch_x
 
 
+class ImageNPMaskDataset(ImageNPDataset):
+
+    def __init__(self, x, y=None, ids=None, img_size=None, mode="rgb"):
+        super(ImageNPMaskDataset, self).__init__(
+            x, y=y, ids=ids, img_size=img_size, mode=mode)
+        logging.info('Loading the masks to uint8')
+        self.y = self.load_all_masks()
+        print(f'Y (in-mem): {self.y.shape}')
+
+    def load_all_masks(self):
+        y = self.load_rle_batch(self.y, img_size=self.img_size, to_float=False)
+        return y
+
+    def create_batch(self, batch_indicies):
+        batch_x = self.x[batch_indicies].astype(np.float32)
+        if self.output_labels:
+            return batch_x, self.y[batch_indicies].astype(np.float32)
+        return batch_x
+
+
 class ImageRLEDataset(ImageDataset):
 
     @staticmethod
-    def load_rle_batch(rles, img_size=None):
-        masks = []
-        for rle in rles:
-            mask = rle_decoding(rle, img_size=ORIG_IMG_SIZE)
-            if img_size is not None and img_size != ORIG_IMG_SIZE:
+    def load_rle_batch(rles, img_size=None, to_float=True):
+        n = len(rles)
+        dtype = np.float32 if to_float else np.uint8
+        img_size = ORIG_IMG_SIZE if img_size is None else img_size
+
+        masks = np.empty((n, *img_size, 1), dtype=dtype)
+        for i, rle in enumerate(rles):
+            mask = rle_decoding(rle, img_size=ORIG_IMG_SIZE, to_float=to_float)
+            if img_size != ORIG_IMG_SIZE:
                 mask = resize(
                     mask, img_size, mode='constant',
-                    preserve_range=True).astype(np.float32)
-            masks.append(mask)
+                    preserve_range=True).astype(dtype, copy=False)
 
-        # If variable image size, stack the images as numpy arrays otherwise
-        # create one large numpy array
-        if img_size is None:
-            masks = np.array(masks, dtype='O')
-        else:
-            masks = np.stack(masks)
+            masks[i] = mask
 
         return masks
 
@@ -139,7 +157,7 @@ class RoadData(object):
         print('Y Shape:', y.shape)
         if self.train_np:
             print('Using in memory image training dataset')
-            return ImageNPRLEDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
+            return ImageNPMaskDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
         return ImageRLEDataset(x, y=y, ids=np.array(ids), img_size=self.img_size)
 
     def load_test(self):
@@ -161,7 +179,7 @@ class RoadData(object):
         print('X shape:', x.shape)
         if self.test_np:
             print('Using in memory image test dataset')
-            return ImageNPRLEDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
+            return ImageNPMaskDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
         return ImageRLEDataset(x, y=None, ids=np.array(ids), img_size=self.img_size)
 
     @staticmethod
@@ -225,13 +243,14 @@ def rle_encoding(x):
     return run_lengths
 
 
-def rle_decoding(run_lengths, img_size=ORIG_IMG_SIZE):
+def rle_decoding(run_lengths, img_size=ORIG_IMG_SIZE, to_float=True):
     flat_size = ORIG_IMG_SIZE[0] * ORIG_IMG_SIZE[1]
-    mask = np.zeros(flat_size)
+    dtype = np.float32 if to_float else np.uint8
+    mask = np.zeros(flat_size, dtype=dtype)
     for i in range(0, len(run_lengths), 2):
         run_start = run_lengths[i]
         length = run_lengths[i + 1]
-        mask[run_start:run_start + length] = 1.
+        mask[run_start:run_start + length] = 1
     # Reshape the mask
     mask = mask.reshape(ORIG_IMG_SIZE).T[:, :, None]
     return mask
