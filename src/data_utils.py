@@ -194,7 +194,7 @@ class RoadData(object):
                 yield mask
 
         if isinstance(train_dataset, ImageNPMaskDataset):
-            coverage = np.sum(dataset.y, axis=(1, 2, 3))
+            coverage = np.sum(train_dataset.y, axis=(1, 2, 3))
         else:
             coverage = np.array([np.sum(y) for y in label_gen(train_dataset)])
         bounds = np.linspace(0.0, coverage.max(), num=num_categories)
